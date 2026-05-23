@@ -166,8 +166,8 @@
 
 <div class="tab-group">
     <div id="btn-record" class="tab-btn active" onclick="switchPage('recordPage')">摳比記帳</div>
+    <div id="btn-shop" class="tab-btn" onclick="switchPage('shopPage')">🏦 摳比錢袋</div>
     <div id="btn-dream" class="tab-btn" onclick="switchPage('dreamPage')">夢想盒</div>
-    <div id="btn-shop" class="tab-btn" onclick="switchPage('shopPage')">🐹 摳比的肚肚</div>
 </div>
 
 <div id="recordPage" class="page active">
@@ -255,33 +255,55 @@
 </div>
 
 <div id="shopPage" class="page">
-    <!-- 摳比肚肚 -->
-    <div style="width:100%; background:white; border-radius:20px; padding:16px; margin-bottom:16px; box-shadow:var(--card-shadow);">
-        <div style="display:flex; align-items:center; gap:14px;">
-            <div style="position:relative;">
-                <img id="kobiShopImg" src="https://kobisavemoney.github.io/kobi/kobi-hungry.png" class="kobi-img kobi-state-hungry" alt="摳比" style="width:80px; height:80px;">
-            </div>
+    <!-- 摳比心情區 -->
+    <div style="width:100%; background:white; border-radius:20px; padding:14px 16px; margin-bottom:14px; box-shadow:var(--card-shadow);">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <img id="kobiShopImg" src="https://kobisavemoney.github.io/kobi/kobi-smile.png" class="kobi-img kobi-state-smile" alt="摳比" style="width:64px; height:64px;">
             <div style="flex:1;">
-                <div style="font-size:14px; font-weight:bold; color:var(--line-brown);" id="kobiHungerText">摳比今天心情普普 🐹</div>
-                <div style="font-size:11px; color:#bbb; margin:4px 0; display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:13px; font-weight:bold; color:var(--line-brown);" id="kobiHungerText">摳比今天心情不錯 😊</div>
+                <div style="font-size:11px; color:#bbb; margin:3px 0; display:flex; justify-content:space-between;">
                     <span>心情值</span>
                     <span id="hungerLevelText" style="font-weight:bold; color:var(--line-brown);">❤️ 0 / 100</span>
                 </div>
-                <div class="hunger-bar-wrap" style="position:relative;">
-                    <div class="hunger-bar-fill low" id="hungerBarFill" style="width:30%;"></div>
-                </div>
-                <div style="font-size:10px; color:#bbb;">幫摳比看看 +15 💛</div>
+                <div class="hunger-bar-wrap"><div class="hunger-bar-fill" id="hungerBarFill" style="width:30%;"></div></div>
             </div>
-            <div id="refreshProductsBtn" style="font-size:11px; color:var(--primary-blue-dark); cursor:pointer; font-weight:bold; white-space:nowrap; align-self:flex-start;">🔄 換一批</div>
+            <button onclick="openModal('budgetSetModal')" style="background:none; border:1.5px solid #eee; border-radius:10px; padding:6px 10px; font-size:11px; color:#999; cursor:pointer; white-space:nowrap;">⚙️ 設預算</button>
         </div>
     </div>
-    <div id="recommendContainer" style="width:100%;">
-        <div style="color:#ccc; text-align:center; padding:20px;">摳比正在想要什麼⋯⋯</div>
+
+    <!-- 本月預算進度 -->
+    <div style="width:100%; background:white; border-radius:20px; padding:16px; margin-bottom:14px; box-shadow:var(--card-shadow);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <b style="font-size:15px;">📊 本月預算進度</b>
+            <div id="budgetMonthLabel" style="font-size:12px; color:#bbb;"></div>
+        </div>
+        <div id="budgetBarsContainer">
+            <div style="color:#ccc; text-align:center; padding:16px; font-size:13px;">還沒設定預算喔！<br>點右上角「⚙️ 設預算」開始</div>
+        </div>
     </div>
-    <div style="text-align:center; padding:16px 0 4px; font-size:11px; color:#ddd;">
+
+    <!-- 今日推薦（橫幅三個）-->
+    <div style="width:100%; margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <b style="font-size:14px;">🐹 摳比今日推薦</b>
+            <div id="refreshProductsBtn" style="font-size:11px; color:var(--primary-blue-dark); cursor:pointer; font-weight:bold;">🔄 換一批</div>
+        </div>
+        <div id="recommendContainer" style="width:100%;"></div>
+    </div>
+
+    <div style="text-align:center; padding:12px 0 4px; font-size:11px; color:#ddd;">
         <a href="privacy.html" style="color:#ddd; text-decoration:none;">🔒 隱私權政策</a>
     </div>
 </div>
+
+<!-- 設定預算 Modal -->
+<div id="budgetSetModal" class="modal"><div class="modal-content">
+    <h3>⚙️ 設定本月預算</h3>
+    <p style="font-size:12px; color:#bbb; margin-bottom:12px;">設定各類別的月預算，沒填的類別不追蹤</p>
+    <div id="budgetInputsContainer" style="max-height:50vh; overflow-y:auto;"></div>
+    <button id="saveBudgetBtn" class="btn-main" style="margin-top:12px;">儲存預算</button>
+    <button onclick="closeModal('budgetSetModal')" style="background:none; border:none; color:#999; margin-top:8px; cursor:pointer; width:100%;">取消</button>
+</div></div>
 
 <!-- Modals -->
 <div id="settleModal" class="modal"><div class="modal-content">
@@ -596,7 +618,126 @@ function showKobiSpeech() {
     }
 }
 
-// ── 飢餓條系統 ──
+// ── 預算系統 ──
+const BUDGET_SPEND_CATS = ["🍜 吃吃喝喝","👗 穿搭戰利品","🧴 生活日用","🚗 移動費用","📱 3C續命費","🎉 享樂基金","🛡️ 存錢保險","📚 充電學習","🏥 身體維修費","📦 進貨備貨","🏪 店舖雜支","🌀 其他雜雜"];
+
+function getBudgets() {
+    return JSON.parse(localStorage.getItem(`kobi_budget_${userId}`) || '{}');
+}
+
+function saveBudgets(budgets) {
+    localStorage.setItem(`kobi_budget_${userId}`, JSON.stringify(budgets));
+}
+
+function renderBudgetInputs() {
+    const budgets = getBudgets();
+    const container = document.getElementById('budgetInputsContainer');
+    if (!container) return;
+    container.innerHTML = BUDGET_SPEND_CATS.map(cat => `
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <div style="flex:1; font-size:13px;">${cat}</div>
+            <input type="number" placeholder="不追蹤" value="${budgets[cat] || ''}"
+                data-cat="${cat}"
+                style="width:90px; padding:8px 10px; border:1.5px solid #eee; border-radius:10px; font-size:13px; text-align:right;">
+        </div>
+    `).join('');
+}
+
+function renderBudgetBars() {
+    const budgets = getBudgets();
+    const container = document.getElementById('budgetBarsContainer');
+    const monthLabel = document.getElementById('budgetMonthLabel');
+    if (!container) return;
+
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    if (monthLabel) monthLabel.innerText = `${now.getMonth()+1}月`;
+
+    const hasBudget = Object.keys(budgets).some(k => budgets[k] > 0);
+    if (!hasBudget) {
+        container.innerHTML = '<div style="color:#ccc; text-align:center; padding:16px; font-size:13px;">還沒設定預算喔！<br>點右上角「⚙️ 設預算」開始</div>';
+        return;
+    }
+
+    // 計算本月各類別實際支出
+    const monthRecords = records.filter(r => r.date.startsWith(thisMonth) && r.type === 'spend');
+    const actualSpend = {};
+    monthRecords.forEach(r => {
+        actualSpend[r.category] = (actualSpend[r.category] || 0) + r.amount;
+    });
+
+    // 更新摳比心情
+    let overBudgetCount = 0;
+
+    container.innerHTML = BUDGET_SPEND_CATS.filter(cat => budgets[cat] > 0).map(cat => {
+        const budget = budgets[cat];
+        const actual = actualSpend[cat] || 0;
+        const pct = Math.min((actual / budget) * 100, 100).toFixed(0);
+        const isOver = actual > budget;
+        const isWarning = !isOver && pct >= 80;
+        if (isOver) overBudgetCount++;
+
+        const barColor = isOver ? '#E07B6A' : isWarning ? '#FFB347' : '#77e89a';
+        const statusText = isOver
+            ? `<span style="color:#E07B6A; font-size:10px;">⚠️ 超支 $${(actual-budget).toLocaleString()}</span>`
+            : isWarning
+            ? `<span style="color:#FFB347; font-size:10px;">快到了！</span>`
+            : '';
+
+        return `<div style="margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div style="font-size:13px;">${cat}</div>
+                <div style="font-size:12px; color:#999;">$${actual.toLocaleString()} / $${budget.toLocaleString()} ${statusText}</div>
+            </div>
+            <div style="background:#f0f0f0; border-radius:20px; height:10px; overflow:hidden;">
+                <div style="height:100%; border-radius:20px; width:${pct}%; background:${barColor}; transition:0.6s;"></div>
+            </div>
+        </div>`;
+    }).join('');
+
+    // 根據超支數量影響摳比心情
+    if (overBudgetCount >= 3) {
+        adjustMoodByBudget(-20);
+    } else if (overBudgetCount >= 1) {
+        adjustMoodByBudget(-10);
+    }
+}
+
+function adjustMoodByBudget(delta) {
+    const key = `kobi_hunger_${userId}`;
+    const data = JSON.parse(localStorage.getItem(key) || '{"level":30,"lastChecked":""}');
+    data.level = Math.max(5, Math.min(100, data.level + delta));
+    localStorage.setItem(key, JSON.stringify(data));
+    updateHungerBar();
+}
+
+document.getElementById('saveBudgetBtn').addEventListener('click', () => {
+    const inputs = document.querySelectorAll('#budgetInputsContainer input');
+    const budgets = {};
+    inputs.forEach(input => {
+        const val = parseFloat(input.value);
+        if (val > 0) budgets[input.dataset.cat] = val;
+    });
+    saveBudgets(budgets);
+    closeModal('budgetSetModal');
+    renderBudgetBars();
+    showToast('✅ 預算設定完成！');
+});
+
+document.getElementById('budgetSetModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('budgetSetModal')) {
+        closeModal('budgetSetModal');
+    }
+});
+
+// 開設定預算彈窗
+document.querySelector('[onclick="openModal(\'budgetSetModal\')"]')?.addEventListener('click', renderBudgetInputs);
+// 也直接 patch openModal for budgetSetModal
+const _origOpenModal = openModal;
+window.openModal = function(id) {
+    _origOpenModal(id);
+    if (id === 'budgetSetModal') renderBudgetInputs();
+};
 function getHungerLevel() {
     const key = `kobi_hunger_${userId}`;
     const data = JSON.parse(localStorage.getItem(key) || '{"level":30,"lastChecked":""}');
@@ -811,6 +952,7 @@ window.switchPage = function(pageId) {
     const btnMap = { recordPage: 'btn-record', dreamPage: 'btn-dream', shopPage: 'btn-shop' };
     document.getElementById(btnMap[pageId]).classList.add('active');
     updateUI();
+    if (pageId === 'shopPage') { renderBudgetBars(); updateHungerBar(); }
 };
 
 function updateCategories() {
@@ -853,6 +995,7 @@ async function loadAllData() {
     updateKobiState();
     updateHungerBar();
     updateStreakBadge();
+    renderBudgetBars();
 }
 
 async function saveDreamFund() {
@@ -1027,6 +1170,16 @@ async function executeSettle() {
         const periodStart = dates[0];
         const periodEnd = dates[dates.length - 1];
 
+        // 計算預算執行報告
+        const budgets = getBudgets();
+        const budgetReport = {};
+        BUDGET_SPEND_CATS.forEach(cat => {
+            if (budgets[cat] > 0) {
+                const actual = records.filter(r => r.type === 'spend' && r.category === cat).reduce((a, r) => a + r.amount, 0);
+                budgetReport[cat] = { budget: budgets[cat], actual };
+            }
+        });
+
         // 封存到 history
         const periodData = {
             settledAt: Date.now(),
@@ -1035,6 +1188,7 @@ async function executeSettle() {
             totalIncome,
             totalExpense,
             transferToFund: transfer,
+            budgetReport,
             items: records.map(r => ({
                 date: r.date,
                 type: r.type,
@@ -1305,6 +1459,24 @@ window.renderHistory = function() {
                 </div>
             </div>
             <div class="period-detail" id="pd-${idx}">
+                ${period.budgetReport && Object.keys(period.budgetReport).length ? `
+                <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #f5f5f5;">
+                    <div style="font-size:12px; font-weight:bold; color:var(--line-brown); margin-bottom:8px;">📊 本期預算執行</div>
+                    ${Object.entries(period.budgetReport).map(([cat, data]) => {
+                        const pct = Math.min((data.actual / data.budget) * 100, 100).toFixed(0);
+                        const isOver = data.actual > data.budget;
+                        const barColor = isOver ? '#E07B6A' : pct >= 80 ? '#FFB347' : '#77e89a';
+                        return `<div style="margin-bottom:8px;">
+                            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:3px;">
+                                <span>${cat}</span>
+                                <span style="color:${isOver?'#E07B6A':'#999'};">$${data.actual.toLocaleString()} / $${data.budget.toLocaleString()} ${isOver?'⚠️超支':''}</span>
+                            </div>
+                            <div style="background:#f0f0f0; border-radius:20px; height:8px; overflow:hidden;">
+                                <div style="height:100%; border-radius:20px; width:${pct}%; background:${barColor};"></div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>` : ''}
                 ${matchedItems.length ? matchedItems.map(item => `
                     <div class="detail-item">
                         <div>
@@ -1600,8 +1772,8 @@ async function loadProducts() {
         const text = await res.text();
         const products = parseCSV(text);
 
-        // 不再篩選，直接隨機抽4-6個
-        const toShow = shuffleAndPick(products);
+        // 只顯示3個
+        const toShow = shuffleAndPick(products).slice(0, 3);
 
         if (!toShow.length) {
             container.innerHTML = '<div style="color:#ccc; text-align:center; padding:20px; border-radius:15px;">摳比今天沒有特別想要的東西⋯⋯</div>';
