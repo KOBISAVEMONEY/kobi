@@ -278,6 +278,20 @@
             <b style="font-size:15px;">🐷 本月預算設定</b>
             <div id="budgetMonthLabel" style="font-size:12px; color:#bbb;"></div>
         </div>
+        <!-- 總預算概覽 -->
+        <div id="budgetTotalSummary" style="display:none; background:#f9f7f5; border-radius:14px; padding:12px 14px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div style="font-size:12px; color:#bbb;">本月總預算</div>
+                <div style="font-size:12px; font-weight:bold; color:var(--line-brown);" id="budgetTotalText">$0</div>
+            </div>
+            <div style="background:#eee; border-radius:20px; height:12px; overflow:hidden; margin-bottom:5px;">
+                <div id="budgetTotalBar" style="height:100%; border-radius:20px; width:0%; background:#77e89a; transition:0.6s;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:11px; color:#bbb;" id="budgetUsedText">已使用 $0</div>
+                <div style="font-size:11px; font-weight:bold;" id="budgetPctText">0%</div>
+            </div>
+        </div>
         <div id="budgetBarsContainer">
             <div style="color:#ccc; text-align:center; padding:16px; font-size:13px;">還沒設定預算喔！<br>點右上角「⚙️ 設預算」開始</div>
         </div>
@@ -666,6 +680,23 @@ function renderBudgetBars() {
     monthRecords.forEach(r => {
         actualSpend[r.category] = (actualSpend[r.category] || 0) + r.amount;
     });
+
+    // 計算總預算概覽
+    const totalBudget = Object.values(budgets).reduce((a, v) => a + (v || 0), 0);
+    const totalActual = Object.keys(budgets).filter(k => budgets[k] > 0).reduce((a, cat) => a + (actualSpend[cat] || 0), 0);
+    const totalSummary = document.getElementById('budgetTotalSummary');
+    if (totalBudget > 0 && totalSummary) {
+        totalSummary.style.display = 'block';
+        const totalPct = Math.min((totalActual / totalBudget) * 100, 100).toFixed(0);
+        const barColor = totalPct >= 100 ? '#E07B6A' : totalPct >= 70 ? '#FFB347' : '#77e89a';
+        const pctColor = totalPct >= 100 ? '#E07B6A' : totalPct >= 70 ? '#FFB347' : '#5DBE8A';
+        document.getElementById('budgetTotalText').innerText = `$${totalBudget.toLocaleString()}`;
+        document.getElementById('budgetTotalBar').style.width = totalPct + '%';
+        document.getElementById('budgetTotalBar').style.background = barColor;
+        document.getElementById('budgetUsedText').innerText = `已使用 $${totalActual.toLocaleString()}`;
+        document.getElementById('budgetPctText').innerText = `${totalPct}%`;
+        document.getElementById('budgetPctText').style.color = pctColor;
+    }
 
     // 更新摳比心情
     let overBudgetCount = 0;
