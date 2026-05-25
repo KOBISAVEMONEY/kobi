@@ -1055,6 +1055,7 @@ async function addRecord() {
         updateUI();
         updateKobiState();
         celebrateRecord();
+        adjustMoodByBudget(5); // 記帳+5心情值
     } catch(e) {
         showError("新增失敗：" + e.message + " (" + (e.code || "unknown") + ")");
     }
