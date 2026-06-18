@@ -225,10 +225,18 @@
         <b style="font-size:18px;">📂 歷史紀錄</b>
     </div>
 
+    <!-- 時間範圍切換 -->
+    <div style="width:100%; background:white; border-radius:16px; padding:6px; margin-bottom:14px; box-shadow:var(--card-shadow); display:flex; gap:4px;">
+        <button class="range-btn active" data-range="week" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:var(--primary-blue); color:white; font-weight:bold;">本週</button>
+        <button class="range-btn" data-range="month" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:none; color:#999;">本月</button>
+        <button class="range-btn" data-range="year" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:none; color:#999;">本年</button>
+        <button class="range-btn" data-range="all" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:none; color:#999;">全部</button>
+    </div>
+
     <!-- 收入分配 -->
     <div style="width:100%; background:white; border-radius:18px; box-shadow:var(--card-shadow); margin-bottom:12px; overflow:hidden;">
         <div id="incomeBreakdownHeader" style="padding:14px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-            <b style="font-size:14px; color:#5B9BD5;">📊 累積收入分配（全期數）</b>
+            <b style="font-size:14px; color:#5B9BD5;" id="incomeBreakdownTitle">📊 本週收入分配</b>
             <span class="chevron" id="incomeBreakdownChev">▼</span>
         </div>
         <div id="incomeBreakdownBody" style="display:none; padding:0 16px 16px;"></div>
@@ -237,7 +245,7 @@
     <!-- 支出分配 -->
     <div style="width:100%; background:white; border-radius:18px; box-shadow:var(--card-shadow); margin-bottom:18px; overflow:hidden;">
         <div id="expenseBreakdownHeader" style="padding:14px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-            <b style="font-size:14px; color:#C0715A;">📊 累積支出分配（全期數）</b>
+            <b style="font-size:14px; color:#C0715A;" id="expenseBreakdownTitle">📊 本週支出分配</b>
             <span class="chevron" id="expenseBreakdownChev">▼</span>
         </div>
         <div id="expenseBreakdownBody" style="display:none; padding:0 16px 16px;"></div>
@@ -1465,14 +1473,39 @@ window.addEventListener('click', (e) => {
 let showAllHistory = false;
 const HISTORY_PREVIEW = 3;
 
-// ── 收入/支出分配統計（已結算歷史）──
+// ── 收入/支出分配統計（依時間範圍篩選已結算歷史）──
+let currentBreakdownRange = 'week';
+
+function getRangeStartDate(range) {
+    const now = new Date();
+    if (range === 'week') {
+        const d = new Date(getTWDate(0));
+        d.setDate(d.getDate() - now.getDay());
+        return d.toISOString().slice(0,10);
+    }
+    if (range === 'month') {
+        return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+    }
+    if (range === 'year') {
+        return `${now.getFullYear()}-01-01`;
+    }
+    return null; // 'all'
+}
+
 function renderIncomeExpenseBreakdown() {
+    const rangeLabel = { week: '本週', month: '本月', year: '本年', all: '全部' };
+    document.getElementById('incomeBreakdownTitle').innerText = `📊 ${rangeLabel[currentBreakdownRange]}收入分配`;
+    document.getElementById('expenseBreakdownTitle').innerText = `📊 ${rangeLabel[currentBreakdownRange]}支出分配`;
+
+    const startDate = getRangeStartDate(currentBreakdownRange);
+
     const incomeMap = {};
     const expenseMap = {};
     let totalIncome = 0, totalExpense = 0;
 
     historyPeriods.forEach(period => {
         (period.items || []).forEach(item => {
+            if (startDate && item.date < startDate) return;
             if (item.type === 'save') {
                 incomeMap[item.category] = (incomeMap[item.category] || 0) + item.amount;
                 totalIncome += item.amount;
@@ -1485,7 +1518,7 @@ function renderIncomeExpenseBreakdown() {
 
     const renderList = (map, total, color) => {
         const sortedCats = Object.entries(map).sort((a,b) => b[1]-a[1]);
-        if (!sortedCats.length) return '<div style="color:#ccc; text-align:center; padding:14px; font-size:13px;">尚無已結算紀錄</div>';
+        if (!sortedCats.length) return '<div style="color:#ccc; text-align:center; padding:14px; font-size:13px;">這個範圍內沒有已結算紀錄</div>';
         return sortedCats.map(([cat, amt]) => {
             const pct = total > 0 ? ((amt/total)*100).toFixed(0) : 0;
             return `<div style="margin-bottom:10px;">
@@ -1507,6 +1540,23 @@ function renderIncomeExpenseBreakdown() {
         <div style="font-size:12px; color:#bbb; margin-bottom:10px;">總支出 $${totalExpense.toLocaleString()}</div>
         ${renderList(expenseMap, totalExpense, '#E07B6A')}`;
 }
+
+document.querySelectorAll('.range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.range-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'none';
+            b.style.color = '#999';
+            b.style.fontWeight = 'normal';
+        });
+        btn.classList.add('active');
+        btn.style.background = 'var(--primary-blue)';
+        btn.style.color = 'white';
+        btn.style.fontWeight = 'bold';
+        currentBreakdownRange = btn.dataset.range;
+        renderIncomeExpenseBreakdown();
+    });
+});
 
 document.getElementById('incomeBreakdownHeader').addEventListener('click', () => {
     const body = document.getElementById('incomeBreakdownBody');
