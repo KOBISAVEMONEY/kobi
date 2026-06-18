@@ -228,7 +228,7 @@
     <!-- 收入分配 -->
     <div style="width:100%; background:white; border-radius:18px; box-shadow:var(--card-shadow); margin-bottom:12px; overflow:hidden;">
         <div id="incomeBreakdownHeader" style="padding:14px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-            <b style="font-size:14px; color:#5B9BD5;">💰 已結算收入分配</b>
+            <b style="font-size:14px; color:#5B9BD5;">📊 累積收入分配（全期數）</b>
             <span class="chevron" id="incomeBreakdownChev">▼</span>
         </div>
         <div id="incomeBreakdownBody" style="display:none; padding:0 16px 16px;"></div>
@@ -237,7 +237,7 @@
     <!-- 支出分配 -->
     <div style="width:100%; background:white; border-radius:18px; box-shadow:var(--card-shadow); margin-bottom:18px; overflow:hidden;">
         <div id="expenseBreakdownHeader" style="padding:14px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-            <b style="font-size:14px; color:#C0715A;">🧾 已結算支出分配</b>
+            <b style="font-size:14px; color:#C0715A;">📊 累積支出分配（全期數）</b>
             <span class="chevron" id="expenseBreakdownChev">▼</span>
         </div>
         <div id="expenseBreakdownBody" style="display:none; padding:0 16px 16px;"></div>
@@ -245,7 +245,7 @@
 
     <!-- 既有搜尋與結算列表 -->
     <div class="history-section" style="margin-top:0;">
-        <div class="history-section-title">📋 結算紀錄查詢</div>
+        <div class="history-section-title">📜 各期結算明細</div>
         <div style="display:flex; gap:8px; margin-bottom:12px;">
             <input class="search-bar" id="historySearch" placeholder="🔍 類別、備註、日期（如 2026-05）" oninput="renderHistory()" style="margin-bottom:0;">
         </div>
@@ -1533,12 +1533,17 @@ window.renderHistory = function() {
 
     // 篩選每期符合的明細
     const filtered = historyPeriods.map((period, idx) => {
-        const matchedItems = keyword
+        let matchedItems = keyword
             ? period.items.filter(item =>
                 item.category.toLowerCase().includes(keyword) ||
                 item.note.toLowerCase().includes(keyword) ||
                 item.date.includes(keyword))
             : period.items;
+        // 收入排最前面，再依日期新到舊排序
+        matchedItems = [...matchedItems].sort((a, b) => {
+            if (a.type !== b.type) return a.type === 'save' ? -1 : 1;
+            return new Date(b.date) - new Date(a.date);
+        });
         return { period, idx, matchedItems };
     }).filter(({ matchedItems }) => !keyword || matchedItems.length > 0);
 
@@ -1592,7 +1597,10 @@ window.renderHistory = function() {
                         </div>`;
                     }).join('')}
                 </div>` : ''}
-                ${matchedItems.length ? matchedItems.map(item => `
+                ${matchedItems.length ? (() => {
+                    const incomeItems = matchedItems.filter(i => i.type === 'save');
+                    const expenseItems = matchedItems.filter(i => i.type === 'spend');
+                    const renderItem = item => `
                     <div class="detail-item">
                         <div>
                             <span style="font-weight:bold;">${item.category}</span>
@@ -1600,7 +1608,18 @@ window.renderHistory = function() {
                             ${item.note ? `<br><span style="font-size:11px; color:#999;">${item.note}</span>` : ''}
                         </div>
                         <b style="color:${item.type==='save'?'#77b5fe':'#9E7E6B'}">${item.type==='save'?'+':'-'}$${item.amount.toLocaleString()}</b>
-                    </div>`).join('') : '<div style="color:#ccc; font-size:13px; padding:10px 0;">沒有符合的紀錄</div>'}
+                    </div>`;
+                    let html = '';
+                    if (incomeItems.length) {
+                        html += `<div style="font-size:11px; font-weight:bold; color:#5B9BD5; margin:8px 0 4px;">💰 收入（${incomeItems.length}筆）</div>`;
+                        html += incomeItems.map(renderItem).join('');
+                    }
+                    if (expenseItems.length) {
+                        html += `<div style="font-size:11px; font-weight:bold; color:#C0715A; margin:12px 0 4px;">🧾 支出（${expenseItems.length}筆）</div>`;
+                        html += expenseItems.map(renderItem).join('');
+                    }
+                    return html;
+                })() : '<div style="color:#ccc; font-size:13px; padding:10px 0;">沒有符合的紀錄</div>'}
             </div>`;
 
         card.querySelector(`#ph-${idx}`).addEventListener('click', () => {
