@@ -226,11 +226,14 @@
     </div>
 
     <!-- 時間範圍切換 -->
-    <div style="width:100%; background:white; border-radius:16px; padding:6px; margin-bottom:14px; box-shadow:var(--card-shadow); display:flex; gap:4px;">
-        <button class="range-btn active" data-range="week" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:var(--primary-blue); color:white; font-weight:bold;">本週</button>
-        <button class="range-btn" data-range="month" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:none; color:#999;">本月</button>
-        <button class="range-btn" data-range="year" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:none; color:#999;">本年</button>
-        <button class="range-btn" data-range="all" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:none; color:#999;">全部</button>
+    <div style="width:100%; background:white; border-radius:16px; padding:10px 12px; margin-bottom:14px; box-shadow:var(--card-shadow);">
+        <div style="display:flex; gap:4px; margin-bottom:8px;">
+            <button class="range-mode-btn active" data-mode="month" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:var(--primary-blue); color:white; font-weight:bold;">📅 按月查詢</button>
+            <button class="range-mode-btn" data-mode="year" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:none; color:#999;">📆 按年查詢</button>
+            <button class="range-mode-btn" data-mode="all" style="flex:1; padding:8px 0; border:none; border-radius:12px; font-size:13px; cursor:pointer; background:none; color:#999;">🗂️ 全部</button>
+        </div>
+        <select id="monthPicker" style="margin:0; display:block;"></select>
+        <select id="yearPicker" style="margin:0; display:none;"></select>
     </div>
 
     <!-- 收入分配 -->
@@ -1473,31 +1476,70 @@ window.addEventListener('click', (e) => {
 let showAllHistory = false;
 const HISTORY_PREVIEW = 3;
 
-// ── 收入/支出分配統計（依時間範圍篩選已結算歷史）──
-let currentBreakdownRange = 'week';
+// ── 收入/支出分配統計（依月份/年份/全部篩選已結算歷史）──
+let currentBreakdownMode = 'month'; // month / year / all
 
-function getRangeStartDate(range) {
-    const now = new Date();
-    if (range === 'week') {
-        const d = new Date(getTWDate(0));
-        d.setDate(d.getDate() - now.getDay());
-        return d.toISOString().slice(0,10);
+function getAvailableMonths() {
+    const months = new Set();
+    historyPeriods.forEach(period => {
+        (period.items || []).forEach(item => months.add(item.date.slice(0,7)));
+    });
+    return [...months].sort().reverse();
+}
+
+function getAvailableYears() {
+    const years = new Set();
+    historyPeriods.forEach(period => {
+        (period.items || []).forEach(item => years.add(item.date.slice(0,4)));
+    });
+    return [...years].sort().reverse();
+}
+
+function populatePickers() {
+    const monthPicker = document.getElementById('monthPicker');
+    const yearPicker = document.getElementById('yearPicker');
+
+    const months = getAvailableMonths();
+    if (months.length) {
+        monthPicker.innerHTML = months.map(m => {
+            const [y, mo] = m.split('-');
+            return `<option value="${m}">${y}年${parseInt(mo)}月</option>`;
+        }).join('');
+    } else {
+        const now = new Date();
+        const cur = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        monthPicker.innerHTML = `<option value="${cur}">${now.getFullYear()}年${now.getMonth()+1}月</option>`;
     }
-    if (range === 'month') {
-        return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+
+    const years = getAvailableYears();
+    if (years.length) {
+        yearPicker.innerHTML = years.map(y => `<option value="${y}">${y}年</option>`).join('');
+    } else {
+        const curY = new Date().getFullYear();
+        yearPicker.innerHTML = `<option value="${curY}">${curY}年</option>`;
     }
-    if (range === 'year') {
-        return `${now.getFullYear()}-01-01`;
-    }
-    return null; // 'all'
 }
 
 function renderIncomeExpenseBreakdown() {
-    const rangeLabel = { week: '本週', month: '本月', year: '本年', all: '全部' };
-    document.getElementById('incomeBreakdownTitle').innerText = `📊 ${rangeLabel[currentBreakdownRange]}收入分配`;
-    document.getElementById('expenseBreakdownTitle').innerText = `📊 ${rangeLabel[currentBreakdownRange]}支出分配`;
+    populatePickers();
 
-    const startDate = getRangeStartDate(currentBreakdownRange);
+    let filterFn, label;
+    if (currentBreakdownMode === 'month') {
+        const selected = document.getElementById('monthPicker').value;
+        filterFn = (date) => date.slice(0,7) === selected;
+        const [y, mo] = selected.split('-');
+        label = `${y}年${parseInt(mo)}月`;
+    } else if (currentBreakdownMode === 'year') {
+        const selected = document.getElementById('yearPicker').value;
+        filterFn = (date) => date.slice(0,4) === selected;
+        label = `${selected}年`;
+    } else {
+        filterFn = () => true;
+        label = '全部';
+    }
+
+    document.getElementById('incomeBreakdownTitle').innerText = `📊 ${label}收入分配`;
+    document.getElementById('expenseBreakdownTitle').innerText = `📊 ${label}支出分配`;
 
     const incomeMap = {};
     const expenseMap = {};
@@ -1505,7 +1547,7 @@ function renderIncomeExpenseBreakdown() {
 
     historyPeriods.forEach(period => {
         (period.items || []).forEach(item => {
-            if (startDate && item.date < startDate) return;
+            if (!filterFn(item.date)) return;
             if (item.type === 'save') {
                 incomeMap[item.category] = (incomeMap[item.category] || 0) + item.amount;
                 totalIncome += item.amount;
@@ -1541,9 +1583,9 @@ function renderIncomeExpenseBreakdown() {
         ${renderList(expenseMap, totalExpense, '#E07B6A')}`;
 }
 
-document.querySelectorAll('.range-btn').forEach(btn => {
+document.querySelectorAll('.range-mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.querySelectorAll('.range-btn').forEach(b => {
+        document.querySelectorAll('.range-mode-btn').forEach(b => {
             b.classList.remove('active');
             b.style.background = 'none';
             b.style.color = '#999';
@@ -1553,10 +1595,17 @@ document.querySelectorAll('.range-btn').forEach(btn => {
         btn.style.background = 'var(--primary-blue)';
         btn.style.color = 'white';
         btn.style.fontWeight = 'bold';
-        currentBreakdownRange = btn.dataset.range;
+        currentBreakdownMode = btn.dataset.mode;
+
+        document.getElementById('monthPicker').style.display = currentBreakdownMode === 'month' ? 'block' : 'none';
+        document.getElementById('yearPicker').style.display = currentBreakdownMode === 'year' ? 'block' : 'none';
+
         renderIncomeExpenseBreakdown();
     });
 });
+
+document.getElementById('monthPicker').addEventListener('change', renderIncomeExpenseBreakdown);
+document.getElementById('yearPicker').addEventListener('change', renderIncomeExpenseBreakdown);
 
 document.getElementById('incomeBreakdownHeader').addEventListener('click', () => {
     const body = document.getElementById('incomeBreakdownBody');
