@@ -1500,23 +1500,32 @@ function populatePickers() {
     const yearPicker = document.getElementById('yearPicker');
 
     const months = getAvailableMonths();
-    if (months.length) {
-        monthPicker.innerHTML = months.map(m => {
-            const [y, mo] = m.split('-');
-            return `<option value="${m}">${y}年${parseInt(mo)}月</option>`;
-        }).join('');
-    } else {
+    const prevMonthVal = monthPicker.value;
+    const monthOptions = months.length ? months : [(() => {
         const now = new Date();
-        const cur = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-        monthPicker.innerHTML = `<option value="${cur}">${now.getFullYear()}年${now.getMonth()+1}月</option>`;
+        return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    })()];
+    const newMonthHTML = monthOptions.map(m => {
+        const [y, mo] = m.split('-');
+        return `<option value="${m}">${y}年${parseInt(mo)}月</option>`;
+    }).join('');
+    if (monthPicker.innerHTML !== newMonthHTML) {
+        monthPicker.innerHTML = newMonthHTML;
+        // 保留先前選擇，如果還存在的話
+        if (prevMonthVal && monthOptions.includes(prevMonthVal)) {
+            monthPicker.value = prevMonthVal;
+        }
     }
 
     const years = getAvailableYears();
-    if (years.length) {
-        yearPicker.innerHTML = years.map(y => `<option value="${y}">${y}年</option>`).join('');
-    } else {
-        const curY = new Date().getFullYear();
-        yearPicker.innerHTML = `<option value="${curY}">${curY}年</option>`;
+    const prevYearVal = yearPicker.value;
+    const yearOptions = years.length ? years : [String(new Date().getFullYear())];
+    const newYearHTML = yearOptions.map(y => `<option value="${y}">${y}年</option>`).join('');
+    if (yearPicker.innerHTML !== newYearHTML) {
+        yearPicker.innerHTML = newYearHTML;
+        if (prevYearVal && yearOptions.includes(prevYearVal)) {
+            yearPicker.value = prevYearVal;
+        }
     }
 }
 
